@@ -481,6 +481,45 @@ proc StatsBoost param
      ret
 .msg du "神秘炒鸡BUFF！查看面板生效",0
 endp
+
+proc ToggleAutoPickup param
+     .if [.timer]
+	invoke KillTimer,0,[.timer]
+	mov [.timer],0
+	Announce 0,.msgOff,37,GREEN
+	ret
+     .endif
+     invoke SetTimer,0,0,200,.TimerProc
+     mov [.timer],eax
+     Announce 0,.msgOn,37,GREEN
+     ret
+     proc .TimerProc hwnd,uMsg,idEvent,dwTime
+	  mov ecx,[CHAR_BASEADDR]
+	  .if ecx
+	      mov ecx,[ecx+0xB8]
+	      .if ecx
+		  push esi
+		  push edi
+		  mov esi,[ecx+0xC0]
+		  mov edi,[ecx+0xC4]
+		  .while esi<edi
+			 mov ecx,[esi]
+			 .if dword[ecx+0x94]=289
+			     PickupItem ecx
+			 .endif
+			 add esi,4
+		  .endw
+		  pop edi
+		  pop esi
+	      .endif
+	  .endif
+	  ret
+     endp
+.timer dd 0
+.msgOff du "自动全屏捡污已关闭！",0
+.msgOn du "自动全屏捡污已开启！",0
+endp
+
 VK_OEM_3 = 0xC0
 NEW_LINE = 0x0A
 hCurrentMod dd 0
@@ -515,7 +554,9 @@ data import
      CallNextHookEx,'CallNextHookEx',\
      SetWindowsHookEx,'SetWindowsHookExW',\
      UnhookWindowsHookEx,'UnhookWindowsHookEx',\
-     GetAsyncKeyState,'GetAsyncKeyState'
+     GetAsyncKeyState,'GetAsyncKeyState',\
+     SetTimer,'SetTimer',\
+     KillTimer,'KillTimer'
      ;import kernel32,\
 
      import kernelbase,\
@@ -564,5 +605,6 @@ HotkeyEntry 0,1,0,'2',FastHeal,0
 HotkeyEntry 0,1,0,VK_OEM_PLUS,AdjustSpeed,1
 HotkeyEntry 0,1,0,VK_OEM_MINUS,AdjustSpeed,-1
 HotkeyEntry 0,0,0,VK_F1,ClearAcceptedQuests,0
+HotkeyEntry 0,0,0,VK_F6,ToggleAutoPickup,0
 endHk:
 include 'BaseAddresses.ASM'
