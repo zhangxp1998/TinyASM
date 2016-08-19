@@ -1,0 +1,469 @@
+format PE DLL
+include 'encoding/utf16.inc'
+include 'win32ax.inc'
+
+entry DllMain
+section '.PoU' readable writable executable
+include 'Call.asm'
+data export
+     export 'ModuleLoader.DLL',\
+	 WndProc,'ICanFly'
+end data
+
+struc HotkeyEntry ctrl,alt,shift,vk,handler,param
+{
+	.ctrl db ctrl
+	.alt db alt
+	.shift db shift
+	.vk dd vk
+	.handler dd handler
+	.param dd param
+}
+
+macro Announce playerName,msg,style,color
+{
+    mov ecx,[SHOP_BASEADDR]
+    mov ecx,[ecx+0x4C]
+    invoke ANNOUNCE_CALL,msg,color,style,playerName,0,0,0
+}
+
+macro GetPlayerName
+{
+    mov eax,[CHAR_BASEADDR]
+    .if eax
+	mov eax,[eax+0x374]
+    .endif
+}
+
+proc DllMain hinstDLL,dwReason,lpvReserved
+    .if [dwReason] = DLL_PROCESS_ATTACH
+	mov eax,[hinstDLL]
+	mov [hCurrentMod],eax
+	invoke DisableThreadLibraryCalls,eax
+    .endif
+
+    mov al,1
+    ret
+endp
+
+proc WndProc nCode,isByCurrentThread,lParam
+     mov ecx,[lParam]
+     .if [ecx+CWPSTRUCT.msg] = 0
+	 call initialize
+     .endif
+     invoke CallNextHookEx,0,[nCode],[isByCurrentThread],[lParam]
+     ret
+endp
+
+proc initialize
+   ;ccall WriteLog,.dbgFormat,KeyboardProc
+
+   invoke SetWindowsHookEx,WH_KEYBOARD,KeyboardProc,[hCurrentMod],<invoke GetCurrentThreadId>
+   .if eax
+       mov [hhook],eax
+       GetPlayerName
+       Announce eax,.greeting,52,LIGHT_GREEN
+       ;ccall WriteLog,.dbgFormat,KeyboardProc
+   .endif
+
+   ret
+   .greeting du "来自ASM的公告...",0
+   ;.dbgFormat db '0x%X',NEW_LINE,0
+endp
+
+proc KeyboardProc code,wParam,lParam
+	mov eax,[lParam]
+	and eax,0x40000000
+	.if eax=0 ;if key is not down before
+		push ebx
+		push esi
+		push edi
+		mov ebx,[wParam];vk code
+		mov esi,beginHk
+		mov edi,endHk
+		.beginLoop:
+			cmp esi,edi
+			jge .endLoop
+			.if [esi+HotkeyEntry.vk]=ebx
+				push VK_CONTROL
+				call IsKeyDown
+				.if al=[esi+HotkeyEntry.ctrl]
+					push VK_MENU
+					call IsKeyDown
+					.if al=[esi+HotkeyEntry.alt]
+						push VK_SHIFT
+						call IsKeyDown
+						.if al=[esi+HotkeyEntry.shift]
+							invoke esi+HotkeyEntry.handler,[esi+HotkeyEntry.param]
+							jmp .endLoop
+						.endif
+					.endif
+				.endif
+			.endif
+			add esi,sizeof.HotkeyEntry
+			jmp .beginLoop
+		.endLoop:
+		pop edi
+		pop esi
+		pop ebx
+	.endif
+
+	.finish:
+	invoke CallNextHookEx,0,[code],[wParam],[lParam]
+	ret
+;.text db 'KeyboardProc() %d 0x%X',NEW_LINE,0
+;.failCtrl db 'CTRL %d %d',NEW_LINE,0
+;.failAlt db 'ALT %d %d',NEW_LINE,0
+;.failSft db 'SHIFT %d %d',NEW_LINE,0
+endp
+
+proc IsKeyDown vk
+	invoke GetAsyncKeyState,[vk]
+	test ax,0x8000
+	setnz al
+	ret
+endp
+
+proc UnloadModule param
+     ;GetPlayerName
+     Announce 0,.exitGreeting,37,GREEN
+     ;ccall WriteLog,.format
+     invoke UnhookWindowsHookEx,[hhook]
+     ret
+.exitGreeting du "尝试退出咯~\(≧▽≦)/~",0
+;.format db 'Hotkey triggered...exiting...',NEW_LINE,0
+endp
+
+proc WriteLog c str,format
+     push esi
+     cinvoke fopen,logfile,access
+     .if eax
+	 mov esi,eax
+	 lea eax,[format]
+	 cinvoke vfprintf,esi,[str],eax
+	 cinvoke fclose,esi
+     .endif
+     pop esi
+     ret
+endp
+proc EnableInvincibility param
+     mov ecx,[CHAR_BASEADDR]
+     .if ecx
+	 mov dword[ecx+0x838],1
+	 inc dword[ecx+0x928]
+	 ;GetPlayerName
+	 Announce 0,.msg,37,GREEN
+     .endif
+     ret
+.msg du "开启霸体无敌!",0
+endp
+
+proc EnableTransparency switch
+     mov ecx,[CHAR_BASEADDR]
+     .if ecx
+	 invoke INVINCI_CALL,1,[switch],0,-1
+	 Announce 0,.msg,37,GREEN
+     .endif
+     ret
+.msg du "开关透明!",0
+endp
+
+proc AdjustRank param
+     mov ecx,[RANK_BASEADDR]
+     add ecx,0x110
+     stdcall Encrypt,ecx,500000
+     Announce 0,.msg,37,GREEN
+     ret
+.msg du "炒鸡评分!",0
+endp
+
+proc EnumDungeonEntities Callback
+     mov ecx,[CHAR_BASEADDR]
+     .if ecx
+	 mov ecx,[ecx+0xB8]
+	 .if ecx
+	     push esi
+	     push edi
+	     mov esi,[ecx+0xC0]
+	     mov edi,[ecx+0xC4]
+	     .while esi<edi
+		    mov ecx,[esi]
+		    call [Callback]
+		    add esi,4
+	     .endw
+	     pop edi
+	     pop esi
+	 .endif
+     .endif
+     ret
+endp
+
+proc ItemVac
+     .if dword[ecx+0x94]=289
+	 PickupItem ecx
+	 Announce 0,.msg,37,GREEN
+     .endif
+     ret
+.msg du "全屏捡污!",0
+endp
+
+proc AmplifyDamage param
+     stdcall Encrypt,STATS_COEFF,0.003
+     Announce 0,.msg,37,GREEN
+     ret
+.msg du "神秘倍攻！",0
+endp
+
+proc SellUnwantedEquips param
+     mov ecx,[BAGPACK_BASEADDR]
+     .if ecx
+	 mov ecx,[ecx+0x58]
+	 .if ecx
+	     push edi
+	     push esi
+		  mov esi,ecx
+		  mov edi,9
+		  .while edi<65
+			 mov ecx,[esi+edi*4]
+			 .if ecx
+			     .if dword[ecx+0x160]>=0 & dword[ecx+0x160]<=2
+				 mov eax,[ecx+0x24]
+				 .if dword[eax]=0x627F4F20
+				 .else
+					stdcall SellItem,edi,1
+				 .endif
+			      .endif
+			 .endif
+			 inc edi
+		  .endw
+	     pop esi
+	     pop edi
+	     Announce 0,.msg,37,GREEN
+	 .endif
+     .endif
+     ret
+.msg du "一键卖污！",0
+endp
+
+proc AdvanceRoom dir
+     stdcall AdvanceRoomCall,[dir]
+     Announce 0,.msg,37,GREEN
+     ret
+.msg du "顺图",0
+endp
+
+proc InstantKill
+     .if dword[ecx+0x94]=529
+	 invoke GO_DIE_CALL,0
+     .endif
+     ret
+endp
+
+proc ZeroHealth
+     .if dword[ecx+0x750]
+	 .if dword[ecx+0x94]=529 | dword[ecx+0x94]=273
+	     local health dq 0
+	     mov eax,[ecx]
+	     call dword[eax+0x5E4]
+	     lea edx,[health]
+	     stdcall Encrypt64,eax,edx
+	     Announce 0,.msg,37,GREEN
+	 .endif
+     .endif
+     ret
+.msg du "0血秒杀！",0
+endp
+
+
+proc InfiniteDurability param
+     mov eax,[CHAR_BASEADDR]
+     .if eax
+	 push ebx
+	 push esi
+	 mov ecx,[eax+WEAPON]
+	 .if ecx
+	     add ecx,DURABILITY_CAP
+	     stdcall Encrypt,ecx,0
+	 .endif
+	 mov esi,[CHAR_BASEADDR]
+	 mov ebx,TOP
+	 .while ebx<=BELT
+		mov ecx,[esi+ebx]
+		.if ecx
+		    add ecx,DURABILITY_CAP
+		    stdcall Encrypt,ecx,0
+		.endif
+		add ebx,4
+	 .endw
+	 pop esi
+	 pop ebx
+	 Announce 0,.msg,37,GREEN
+     .endif
+     ret
+.msg du "免耐久已开启！换角色需再次开启",0
+endp
+
+proc AdjustCriticalHitrate param
+     mov ecx,[CHAR_BASEADDR]
+     .if ecx
+	 push ebx
+	 mov ecx,[ecx+RING]
+	 .if ecx
+	     lea ebx,[ecx+PHY_CRITICAL_HITRATE]
+	     stdcall Encrypt,ebx,80.0
+	     add ebx,MAG_CRITICAL_HITRATE-PHY_CRITICAL_HITRATE
+	     stdcall Encrypt,ebx,80.0
+	     Announce 0,.msg,37,GREEN
+	 .endif
+	 pop ebx
+     .endif
+     ret
+.msg du "已大幅度增加暴击率！查看面板生效！",0
+endp
+
+proc FastHeal param
+     mov ecx,[CHAR_BASEADDR]
+     .if ecx
+	 push ebx
+	 mov ecx,[ecx+WEAPON]
+	 .if ecx
+	     lea ebx,[ecx+HP_RECOVER_RATE]
+	     stdcall Encrypt,ebx,125000
+	     add ebx,MP_RECOVER_RATE-HP_RECOVER_RATE
+	     stdcall Encrypt,ebx,30000
+	     Announce 0,.msg,37,GREEN
+	 .endif
+	 pop ebx
+     .endif
+     ret
+.msg du "大回复术！查看面板生效！",0
+endp
+
+proc IncreaseStats base,delta
+     stdcall Decrypt,[base]
+     add eax,[delta]
+     stdcall Encrypt,[base],eax
+     ret
+endp
+
+proc AdjustSpeed param
+     mov ecx,[CHAR_BASEADDR]
+     .if ecx
+	 push ebx
+	 mov ebx,[ecx+SHOULDER]
+	 .if ecx
+	     local delta dd ?
+	     mov eax,200
+	     imul[param]
+	     mov [delta],eax
+	     lea ecx,[ebx+MOVEMENT_SPEED]
+	     stdcall IncreaseStats,ecx,[delta]
+	     lea ecx,[ebx+ATTACK_SPEED]
+	     stdcall IncreaseStats,ecx,[delta]
+	     lea ecx,[ebx+CASTING_SPEED]
+	     stdcall IncreaseStats,ecx,[delta]
+	     Announce 0,.msg,37,GREEN
+	 .endif
+	 pop ebx
+     .endif
+     ret
+.msg du "调整三速！",0
+endp
+
+proc IgnoreTeamates
+     .if dword[ecx+0x750]=0
+	 .if dword[ecx+0x94]=273
+	     push ebx
+	     lea ebx,[ecx+0x198]
+	     stdcall Encrypt,ebx,0
+	     Announce dword[ecx+0x374],.msg,37,GREEN
+	     pop ebx
+	 .endif
+     .endif
+     ret
+.msg du "无视队友！",0
+endp
+
+VK_OEM_3 = 0xC0
+NEW_LINE = 0x0A
+hCurrentMod dd 0
+hhook dd 0
+logfile db 'C:\fasm.log',0
+access db 'a+',0
+
+struct HotkeyEntry
+	ctrl db ?
+	alt db ?
+	shift db ?
+	vk dd ?
+	handler dd ?
+	param dd ?
+ends
+
+struct CWPSTRUCT
+	lParam dd ?
+	wParam dd ?
+	msg dd ?
+	hwnd dd ?
+ends
+;section '.import' import readable writable
+data import
+     library kernel32,'KERNEL32.DLL',\
+	     kernelbase,'KERNELBASE.DLL',\
+	     msvcrt,'MSVCRT.DLL',\
+	     user32,'USER32.DLL',\
+	     ntdll,'NTDLL.DLL'
+
+     import user32,\
+     CallNextHookEx,'CallNextHookEx',\
+     SetWindowsHookEx,'SetWindowsHookExW',\
+     UnhookWindowsHookEx,'UnhookWindowsHookEx',\
+     GetAsyncKeyState,'GetAsyncKeyState'
+     ;import kernel32,\
+
+     import kernelbase,\
+     GetCurrentThreadId,'GetCurrentThreadId',\
+     DisableThreadLibraryCalls,'DisableThreadLibraryCalls',\
+     OutputDebugString,'OutputDebugStringA',\
+     OutputDebugStringW,'OutputDebugStringW'
+
+     import msvcrt,\
+     printf,'printf',\
+     fopen,'fopen',\
+     vfprintf,'vfprintf',\
+     fclose,'fclose'
+
+     import ntdll,\
+     DbgPrint,'DbgPrint',\
+     sprintf,'sprintf'
+
+end data
+
+section '.reloc' data discardable readable fixups
+;if ~ $-$$
+	;dd	 0,8 ;empty fixups section if no other fixups
+;end if
+section '.const' data readable
+beginHk:;CTRL ALT SHIFT VK CallBack,Param
+HotkeyEntry 1,0,0,VK_F12,UnloadModule,0
+HotkeyEntry 0,1,0,VK_F3,EnableInvincibility,0
+HotkeyEntry 0,1,0,VK_OEM_3,EnableTransparency,1
+HotkeyEntry 0,1,1,VK_OEM_3,EnableTransparency,0
+HotkeyEntry 0,0,0,VK_F5,AdjustRank,0
+HotkeyEntry 0,0,0,VK_CAPITAL,EnumDungeonEntities,ItemVac
+HotkeyEntry 0,1,0,VK_F1,AmplifyDamage,0
+HotkeyEntry 0,0,0,VK_F7,SellUnwantedEquips,0
+HotkeyEntry 0,1,0,VK_LEFT,AdvanceRoom,LEFT
+HotkeyEntry 0,1,0,VK_RIGHT,AdvanceRoom,RIGHT
+HotkeyEntry 0,1,0,VK_UP,AdvanceRoom,UP
+HotkeyEntry 0,1,0,VK_DOWN,AdvanceRoom,DOWN
+HotkeyEntry 0,0,0,VK_INSERT,EnumDungeonEntities,InstantKill
+HotkeyEntry 0,1,0,'C',EnumDungeonEntities,ZeroHealth
+HotkeyEntry 0,1,0,'W',EnumDungeonEntities,IgnoreTeamates
+HotkeyEntry 0,0,0,VK_OEM_3,InfiniteDurability,0
+HotkeyEntry 0,1,0,'1',AdjustCriticalHitrate,0
+HotkeyEntry 0,1,0,'2',FastHeal,0
+HotkeyEntry 0,1,0,VK_OEM_PLUS,AdjustSpeed,1
+HotkeyEntry 0,1,0,VK_OEM_MINUS,AdjustSpeed,-1
+endHk:
+include 'BaseAddresses.ASM'
