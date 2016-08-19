@@ -132,3 +132,16 @@ proc SellItem index,quantity
      SEND_PACKET_CALL
      ret
 endp
+
+proc CompleteQuest id,count
+     .while [count]>0
+	    SEND_BUFFER_CALL 33,0
+	    SEND_ENCRYPT_CALL 33,2
+	    SEND_ENCRYPT_CALL [id],2
+	    SEND_ENCRYPT_CALL -1,1
+	    SEND_ENCRYPT_CALL -1,1
+	    SEND_PACKET_CALL
+	    dec [count]
+     .endw
+     ret
+endp

@@ -384,6 +384,103 @@ proc IgnoreTeamates
 .msg du "无视队友！",0
 endp
 
+proc GetOptimalCompletionCount count
+     mov edx,[count]
+     xor ecx,ecx
+     xor eax,eax
+     .while ecx<4
+	    shr edx,cl
+	    .if cl>al
+		mov al,cl
+	    .endif
+	    shr edx,8
+	    inc ecx
+     .endw
+     ret
+endp
+
+proc ClearAcceptedQuests param
+     mov ecx,[QUEST_BASEADDR]
+     .if ecx
+	 push esi
+	 push edi
+	 mov esi,[ecx+0x8]
+	 mov edi,[ecx+0xC]
+	 .while esi<edi
+		mov ecx,[esi]
+		.if dword[ecx+0x1D4]
+		    lea edx,[esi+0x4]
+		    stdcall Decrypt,edx
+		    stdcall GetOptimalCompletionCount,eax
+		    ;local optCount dd ?
+		    ;mov [optCount],eax
+		    ;ccall WriteLog,.format,eax
+		    ;mov eax,[optCount]
+		    .if eax
+			mov ecx,[esi]
+			stdcall CompleteQuest,dword[ecx],eax
+			mov ecx,[esi]
+			mov edx,[ecx+0x8]
+			.if dword[ecx+0x1C]=7
+			    lea edx,[ecx+0x8]
+			.endif
+			Announce .msg,edx,37,GREEN
+		    .endif
+		.endif
+		add esi,0xC
+	 .endw
+	 pop edi
+	 pop esi
+     .endif
+     ret
+.msg du "完成任务",0
+;.format db "%d",NEW_LINE,0
+endp
+
+proc StatsBoost param
+     mov ecx,[CHAR_BASEADDR]
+     .if
+	mov ecx,[ecx+TOP]
+	.if ecx
+	    push esi
+	    mov esi,ecx
+	    lea ecx,[esi+FOUR_STATS]
+	    stdcall Encrypt,ecx,833
+	    lea ecx,[esi+PHY_ATK]
+	    stdcall Encrypt,ecx,1000
+	    lea ecx,[esi+MAG_ATK]
+	    stdcall Encrypt,ecx,1000
+	    lea ecx,[esi+EXOC]
+	    stdcall Encrypt,ecx,130
+	    lea ecx,[esi+ELEMENTAL_DMG]
+	    stdcall Encrypt,ecx,800
+	    lea ecx,[esi+PHY_PIERC_ATK]
+	    stdcall Encrypt,ecx,1000
+	    lea ecx,[esi+MAG_PIERC_ATK]
+	    stdcall Encrypt,ecx,1000
+	    lea ecx,[esi+INDEPENDENT_ATK]
+	    stdcall Encrypt,ecx,500
+	    lea ecx,[esi+REFINE_INDP_ATK]
+	    stdcall Encrypt,ecx,500
+	    lea ecx,[esi+ABNORMAL_STATUS_RESI]
+	    stdcall Encrypt,ecx,1000
+	    lea ecx,[esi+IMMOBILITY]
+	    stdcall Encrypt,ecx,1000
+	    lea ecx,[esi+MISS_RATE]
+	    stdcall Encrypt,ecx,2000
+	    lea ecx,[esi+HITRATE_DEC]
+	    stdcall Encrypt,ecx,-200.0
+	    lea ecx,[esi+BONUS_DMG_APC]
+	    stdcall Encrypt,ecx,1000.0
+	    lea ecx,[esi+BONUS_DMG_BLD]
+	    stdcall Encrypt,ecx,1000.0
+	    pop esi
+	    Announce 0,.msg,37,GREEN
+	.endif
+     .endif
+     ret
+.msg du "神秘炒鸡BUFF！查看面板生效",0
+endp
 VK_OEM_3 = 0xC0
 NEW_LINE = 0x0A
 hCurrentMod dd 0
@@ -458,6 +555,7 @@ HotkeyEntry 0,1,0,VK_RIGHT,AdvanceRoom,RIGHT
 HotkeyEntry 0,1,0,VK_UP,AdvanceRoom,UP
 HotkeyEntry 0,1,0,VK_DOWN,AdvanceRoom,DOWN
 HotkeyEntry 0,0,0,VK_INSERT,EnumDungeonEntities,InstantKill
+HotkeyEntry 0,1,0,'Z',StatsBoost,0
 HotkeyEntry 0,1,0,'C',EnumDungeonEntities,ZeroHealth
 HotkeyEntry 0,1,0,'W',EnumDungeonEntities,IgnoreTeamates
 HotkeyEntry 0,0,0,VK_OEM_3,InfiniteDurability,0
@@ -465,5 +563,6 @@ HotkeyEntry 0,1,0,'1',AdjustCriticalHitrate,0
 HotkeyEntry 0,1,0,'2',FastHeal,0
 HotkeyEntry 0,1,0,VK_OEM_PLUS,AdjustSpeed,1
 HotkeyEntry 0,1,0,VK_OEM_MINUS,AdjustSpeed,-1
+HotkeyEntry 0,0,0,VK_F1,ClearAcceptedQuests,0
 endHk:
 include 'BaseAddresses.ASM'
