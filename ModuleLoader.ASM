@@ -390,8 +390,8 @@ proc GetOptimalCompletionCount count
      xor eax,eax
      .while ecx<4
 	    shr edx,cl
-	    .if cl>al
-		mov al,cl
+	    .if dl>al
+		mov al,dl
 	    .endif
 	    shr edx,8
 	    inc ecx
