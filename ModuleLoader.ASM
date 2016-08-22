@@ -520,10 +520,118 @@ proc ToggleAutoPickup param
 .msgOn du "自动全屏捡污已开启！",0
 endp
 
+proc InstKill param
+     stdcall ObjSkillCall,0,39002,0,0,0,0,33
+     Announce 0,.msg,37,GREEN
+     ret
+.msg du "已击杀房间内所有敌人！(╰_╯)#",0
+endp
+
+proc ClearChallengeQuests param
+     push esi
+     push edi
+	 mov esi,[CHAL_QUEST_BASEADDR]
+	 mov edi,[CHAL_QUEST_BASEADDR+0x4]
+	 .while esi<edi
+		mov ecx,[esi]
+		.if dword[ecx+0x1D4]
+		    lea edx,[esi+0x4]
+		    stdcall Decrypt,edx
+		    stdcall GetOptimalCompletionCount,eax
+		    .if eax
+			mov ecx,[esi]
+			stdcall CompleteQuest,dword[ecx],eax
+			mov ecx,[esi]
+			mov edx,[ecx+0x8]
+			Announce .msg,edx,37,GREEN
+		    .endif
+		.endif
+		add esi,0xC
+	 .endw
+     pop edi
+     pop esi
+     ret
+.msg du "完成挑战任务",0
+endp
+
+proc SubmitChallengeQuest param
+     .if [currentQuest]=0
+	 mov eax,[CHAL_QUEST_BASEADDR]
+	 mov [currentQuest],eax
+	 invoke SetTimer,0,0,140,.TimerProc
+	 mov [submitTimer],eax
+     .endif
+     ret
+
+     proc .TimerProc hwnd,uMsg,idEvent,dwTime
+	  mov eax,[currentQuest]
+	  .if eax<=[CHAL_QUEST_BASEADDR+0x4]
+	      mov ecx,[eax]
+	      .if dword[ecx+0x1D4]
+		  lea edx,[eax+0x4]
+		  stdcall Decrypt,edx
+		  stdcall GetOptimalCompletionCount,eax
+		  mov ecx,[currentQuest]
+		  mov ecx,[ecx]
+		  .if eax=0
+		      stdcall SubmitQuest,dword[ecx]
+		      mov ecx,[currentQuest]
+		      mov ecx,[ecx]
+		      mov edx,[ecx+0x8]
+		      Announce .msg,edx,37,GREEN
+		  .endif
+		  add [currentQuest],0xC
+		  ret
+	      .endif
+	  .endif
+	  push ebx
+	       SEND_BUFFER_CALL 700,0
+	       SEND_ENCRYPT_CALL ebx,4
+	       SEND_PACKET_CALL
+	  pop ebx
+	  invoke KillTimer,0,[submitTimer]
+	  mov [currentQuest],0
+	  ret
+     endp
+.msg du "提交挑战任务",0
+endp
+
+proc AttackEnemy
+     .if dword[ecx+0x750]
+	 .if dword[ecx+0x94]=529 | dword[ecx+0x94]=273
+	      local float dd 0
+	      push 33
+
+	      mov eax,[ecx+0x1B8+0x8]
+	      mov [float],eax
+	      cvtss2si eax,[float]
+	      push eax
+
+	      mov eax,[ecx+0x1B8+0x4]
+	      mov [float],eax
+	      cvtss2si eax,[float]
+	      push eax
+
+	      mov eax,[ecx+0x1B8]
+	      mov [float],eax
+	      cvtss2si eax,[float]
+	      push eax
+
+	      push 0
+	      push 70023
+	      push 0
+	      call ObjSkillCall
+	 .endif
+     .endif
+     ret
+endp
+
 VK_OEM_3 = 0xC0
 NEW_LINE = 0x0A
 hCurrentMod dd 0
+submitTimer dd 0
 hhook dd 0
+currentQuest dd 0
 logfile db 'C:\fasm.log',0
 access db 'a+',0
 
@@ -599,9 +707,13 @@ HotkeyEntry 0,0,0,VK_INSERT,EnumDungeonEntities,InstantKill
 HotkeyEntry 0,1,0,'Z',StatsBoost,0
 HotkeyEntry 0,1,0,'C',EnumDungeonEntities,ZeroHealth
 HotkeyEntry 0,1,0,'W',EnumDungeonEntities,IgnoreTeamates
+HotkeyEntry 0,1,0,'D',EnumDungeonEntities,AttackEnemy
+HotkeyEntry 0,1,0,'E',InstKill,0
 HotkeyEntry 0,0,0,VK_OEM_3,InfiniteDurability,0
 HotkeyEntry 0,1,0,'1',AdjustCriticalHitrate,0
 HotkeyEntry 0,1,0,'2',FastHeal,0
+HotkeyEntry 0,1,0,'4',ClearChallengeQuests,0
+HotkeyEntry 0,1,0,'5',SubmitChallengeQuest,0
 HotkeyEntry 0,1,0,VK_OEM_PLUS,AdjustSpeed,1
 HotkeyEntry 0,1,0,VK_OEM_MINUS,AdjustSpeed,-1
 HotkeyEntry 0,0,0,VK_F1,ClearAcceptedQuests,0

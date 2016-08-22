@@ -106,6 +106,7 @@ macro PickupItem itemObj
 	mov ecx,[BAGPACK_BASEADDR]
 	call [PICKUP_CALL]
 }
+
 LEFT = 0
 RIGHT = 1
 UP = 2
@@ -143,5 +144,44 @@ proc CompleteQuest id,count
 	    SEND_PACKET_CALL
 	    dec [count]
      .endw
+     ret
+endp
+
+proc SubmitQuest id
+     SEND_BUFFER_CALL 34,0
+     SEND_ENCRYPT_CALL 34,2
+     SEND_ENCRYPT_CALL [id],2
+     SEND_ENCRYPT_CALL 65535,2
+     SEND_ENCRYPT_CALL 1,2
+     SEND_ENCRYPT_CALL 65535,2
+     SEND_PACKET_CALL
+     ret
+endp
+
+proc ObjSkillCall target,code,damage,x,y,z,objType
+     mov ecx,[CHAR_BASEADDR]
+     .if ecx
+	 ;push esi
+	 ;mov esi,[ecx+0xB8]
+	 .if dword[ecx+0xB8]
+	     push edi
+	     cinvoke SKILL_CREATION_CALL,[code],[damage]
+	     mov edi,eax
+	     mov edx,[edi]
+	     mov ecx,edi
+	     stdcall dword[edx+0x324],0
+	     mov edx,[edi]
+	     mov ecx,edi
+	     stdcall dword[edx+0x218],dword[target]
+	     mov edx,[edi]
+	     mov ecx,edi
+	     stdcall dword[edx+0xAC],[x],[y],[z]
+	     mov ecx,[CHAR_BASEADDR]
+	     mov ecx,[ecx+0xB8]
+	     invoke OBJ_WRITE_CALL,edi,dword[objType],0,edi,0,0,0,1
+	     pop edi
+	 .endif
+	 ;pop esi
+     .endif
      ret
 endp
