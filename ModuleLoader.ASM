@@ -660,8 +660,10 @@ proc RemoveCD param
 	 .endw
 	 pop edi
 	 pop esi
+	 Announce .msg,edx,37,GREEN
      .endif
      ret
+.msg du "无CD模式已开启！",0
 endp
 
 VK_OEM_3 = 0xC0
