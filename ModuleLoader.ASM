@@ -626,6 +626,44 @@ proc AttackEnemy
      ret
 endp
 
+proc RemoveCD param
+     mov ecx,[CHAR_BASEADDR]
+     .if ecx
+	 push esi
+	 push edi
+	 mov edi,ecx
+	 mov esi,0x3BD8
+	 .while esi<=0x4FD8
+		mov ecx,[edi+esi]
+		.if ecx
+		     lea edx,[ecx+0x6F0];skill level offset
+		     stdcall Decrypt,edx
+		     .if eax
+			 local lvOffset dd 0
+			 dec eax
+			 shl eax,3
+			 mov [lvOffset],eax
+			 mov ecx,[edi+esi]
+			 mov ecx,[ecx+0x300]
+			 lea ecx,[ecx+eax]
+			 stdcall Encrypt,ecx,0
+
+			 mov eax,[lvOffset]
+			 mov ecx,[edi+esi]
+			 mov ecx,[ecx+0x250]
+			 lea ecx,[ecx+eax]
+			 stdcall Encrypt,ecx,0
+
+		     .endif
+		.endif
+		add esi,4
+	 .endw
+	 pop edi
+	 pop esi
+     .endif
+     ret
+endp
+
 VK_OEM_3 = 0xC0
 NEW_LINE = 0x0A
 hCurrentMod dd 0
@@ -712,6 +750,7 @@ HotkeyEntry 0,1,0,'E',InstKill,0
 HotkeyEntry 0,0,0,VK_OEM_3,InfiniteDurability,0
 HotkeyEntry 0,1,0,'1',AdjustCriticalHitrate,0
 HotkeyEntry 0,1,0,'2',FastHeal,0
+HotkeyEntry 0,1,0,'3',RemoveCD,0
 HotkeyEntry 0,1,0,'4',ClearChallengeQuests,0
 HotkeyEntry 0,1,0,'5',SubmitChallengeQuest,0
 HotkeyEntry 0,1,0,VK_OEM_PLUS,AdjustSpeed,1
