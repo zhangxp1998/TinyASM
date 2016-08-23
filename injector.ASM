@@ -65,24 +65,28 @@ FORMAT_MESSAGE_IGNORE_INSERTS = 0x00000200
 
 data import
 	library kernel32,'KERNEL32.DLL',\
-		kernelbase,'KERNELBASE.DLL',\
 		msvcrt,'MSVCRT.DLL',\
-		user32,'USER32.DLL'
-	import kernelbase,\
-	       PathFileExists,'PathFileExistsA',\
-	       DeleteFile,'DeleteFileA',\
-	       LoadLibrary,'LoadLibraryA',\
-	       GetCurrentThreadId,'GetCurrentThreadId',\
-	       FormatMessage,'FormatMessageA',\
-	       GetLastError,'GetLastError',\
-	       LocalFree,'LocalFree'
+		user32,'USER32.DLL',\
+		shlwapi,'SHLWAPI.DLL'
+
+	import shlwapi,\
+	PathFileExists,'PathFileExistsA'
+
 	import kernel32,\
+	       LocalFree,'LocalFree',\
+	       GetLastError,'GetLastError',\
+	       FormatMessage,'FormatMessageA',\
+	       GetCurrentThreadId,'GetCurrentThreadId',\
+	       LoadLibrary,'LoadLibraryA',\
 	       ExitProcess,'ExitProcess',\
 	       MoveFile,'MoveFileA',\
-	       GetProcAddress,'GetProcAddress'
+	       GetProcAddress,'GetProcAddress',\
+	       DeleteFile,'DeleteFileA'
+
 	import msvcrt,\
 	       getchar,'getchar',\
 	       printf,'printf'
+
 	import user32,\
 	       FindWindow,'FindWindowA',\
 	       GetWindowThreadProcessId, 'GetWindowThreadProcessId',\

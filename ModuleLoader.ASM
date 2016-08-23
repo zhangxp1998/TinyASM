@@ -826,14 +826,14 @@ data import
      ;OutputDebugString,'OutputDebugStringA',\
      ;OutputDebugStringW,'OutputDebugStringW'
 
-     import msvcrt,\
-     printf,'printf',\
-     fopen,'fopen',\
-     vfprintf,'vfprintf',\
-     fclose,'fclose'
+     ;import msvcrt,\
+     ;printf,'printf',\
+     ;fopen,'fopen',\
+     ;vfprintf,'vfprintf',\
+     ;fclose,'fclose'
 
-     import ntdll,\
-     sprintf,'sprintf'
+     ;import ntdll,\
+     ;sprintf,'sprintf'
 
 end data
 
