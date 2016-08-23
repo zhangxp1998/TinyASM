@@ -1,6 +1,7 @@
 format PE DLL
 include 'encoding/utf16.inc'
 include 'win32ax.inc'
+include 'winternl.inc'
 
 entry DllMain
 section '.PoU' readable writable executable
@@ -35,6 +36,81 @@ macro GetPlayerName
     .endif
 }
 
+proc UNLINK entry
+     mov eax,[entry]
+     mov edx,[eax+LIST_ENTRY.FLink]
+     .if edx
+	 mov ecx,[eax+LIST_ENTRY.BLink]
+	 mov [edx+LIST_ENTRY.BLink],ecx
+     .endif
+     mov edx,[eax+LIST_ENTRY.BLink]
+     .if edx
+	 mov ecx,[eax+LIST_ENTRY.FLink]
+	 mov [edx+LIST_ENTRY.FLink],ecx
+     .endif
+     ret
+endp
+
+proc RELINK entry
+     mov eax,[entry]
+     mov edx,[eax+LIST_ENTRY.FLink]
+     .if edx
+	 mov ecx,[eax+LIST_ENTRY.BLink]
+	 mov [edx+LIST_ENTRY.BLink],eax
+     .endif
+     mov edx,[eax+LIST_ENTRY.BLink]
+     .if edx
+	 mov ecx,[eax+LIST_ENTRY.FLink]
+	 mov [edx+LIST_ENTRY.FLink],eax
+     .endif
+     ret
+endp
+
+
+proc UnlinkModuleFromPEB
+     ;push ebx
+     ;mov ebx,ecx
+     mov eax,[fs:0x30]
+     mov eax,[eax+PEB.LDR]
+     add eax,LDR.LoadOrderList
+     .while eax
+	 .if[eax+LDR_DATA_TABLE_ENTRY.DllBase]=ecx
+		push esi
+		mov esi,eax
+		lea eax,[esi+LDR_DATA_TABLE_ENTRY.LoadOrderList]
+		stdcall UNLINK,eax
+		lea eax,[esi+LDR_DATA_TABLE_ENTRY.MemoryOrderList]
+		stdcall UNLINK,eax
+		lea eax,[esi+LDR_DATA_TABLE_ENTRY.InitialOrderList]
+		stdcall UNLINK,eax
+		lea eax,[esi+LDR_DATA_TABLE_ENTRY.HashTableEntry]
+		stdcall UNLINK,eax
+		mov eax,esi
+		pop esi
+		;pop ebx
+		ret
+	 .endif
+	 mov eax,[eax+LIST_ENTRY.FLink]
+     .endw
+     ;pop ebx
+     ret
+endp
+
+proc RelinkModuleToPEB
+     push esi
+     mov esi,ecx
+     lea eax,[esi+LDR_DATA_TABLE_ENTRY.LoadOrderList]
+     stdcall RELINK,eax
+     lea eax,[esi+LDR_DATA_TABLE_ENTRY.MemoryOrderList]
+     stdcall RELINK,eax
+     lea eax,[esi+LDR_DATA_TABLE_ENTRY.InitialOrderList]
+     stdcall RELINK,eax
+     lea eax,[esi+LDR_DATA_TABLE_ENTRY.HashTableEntry]
+     stdcall RELINK,eax
+     pop esi
+     ret
+endp
+
 proc DllMain hinstDLL,dwReason,lpvReserved
     .if [dwReason] = DLL_PROCESS_ATTACH
 	mov eax,[hinstDLL]
@@ -57,7 +133,9 @@ endp
 
 proc initialize
    ;ccall WriteLog,.dbgFormat,KeyboardProc
-
+   mov ecx,[hCurrentMod]
+   call UnlinkModuleFromPEB
+   mov [unlinkedLdr],eax
    invoke SetWindowsHookEx,WH_KEYBOARD,KeyboardProc,[hCurrentMod],<invoke GetCurrentThreadId>
    .if eax
        mov [hhook],eax
@@ -126,8 +204,9 @@ endp
 
 proc UnloadModule param
      ;GetPlayerName
+     mov ecx,[unlinkedLdr]
+     stdcall RelinkModuleToPEB
      Announce 0,.exitGreeting,37,GREEN
-     ;ccall WriteLog,.format
      invoke UnhookWindowsHookEx,[hhook]
      ret
 .exitGreeting du "³¢ÊÔÍË³ö¿©~\(¨R¨Œ¨Q)/~",0
@@ -672,6 +751,7 @@ hCurrentMod dd 0
 submitTimer dd 0
 hhook dd 0
 currentQuest dd 0
+unlinkedLdr dd 0
 logfile db 'C:\fasm.log',0
 access db 'a+',0
 
@@ -709,9 +789,9 @@ data import
 
      import kernelbase,\
      GetCurrentThreadId,'GetCurrentThreadId',\
-     DisableThreadLibraryCalls,'DisableThreadLibraryCalls',\
-     OutputDebugString,'OutputDebugStringA',\
-     OutputDebugStringW,'OutputDebugStringW'
+     DisableThreadLibraryCalls,'DisableThreadLibraryCalls'
+     ;OutputDebugString,'OutputDebugStringA',\
+     ;OutputDebugStringW,'OutputDebugStringW'
 
      import msvcrt,\
      printf,'printf',\
@@ -720,7 +800,6 @@ data import
      fclose,'fclose'
 
      import ntdll,\
-     DbgPrint,'DbgPrint',\
      sprintf,'sprintf'
 
 end data
