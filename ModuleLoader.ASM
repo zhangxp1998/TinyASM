@@ -817,12 +817,13 @@ data import
      GetAsyncKeyState,'GetAsyncKeyState',\
      SetTimer,'SetTimer',\
      KillTimer,'KillTimer'
-     ;import kernel32,\
 
-     import kernelbase,\
+     import kernel32,\
      GetCurrentThreadId,'GetCurrentThreadId',\
      DisableThreadLibraryCalls,'DisableThreadLibraryCalls',\
      VirtualProtect,'VirtualProtect'
+     ;import kernelbase,\
+
      ;OutputDebugString,'OutputDebugStringA',\
      ;OutputDebugStringW,'OutputDebugStringW'
 
