@@ -779,11 +779,11 @@ endp
 
 VK_OEM_3 = 0xC0
 NEW_LINE = 0x0A
-hCurrentMod dd 0
-submitTimer dd 0
-hhook dd 0
-currentQuest dd 0
-unlinkedLdr dd 0
+hCurrentMod dd ?
+submitTimer dd ?
+hhook dd ?
+currentQuest dd ?
+unlinkedLdr dd ?
 logfile db 'C:\fasm.log',0
 access db 'a+',0
 
@@ -805,9 +805,9 @@ ends
 ;section '.import' import readable writable
 data import
      library kernel32,'KERNEL32.DLL',\
+	     user32,'USER32.DLL',\
 	     kernelbase,'KERNELBASE.DLL',\
 	     msvcrt,'MSVCRT.DLL',\
-	     user32,'USER32.DLL',\
 	     ntdll,'NTDLL.DLL'
 
      import user32,\
