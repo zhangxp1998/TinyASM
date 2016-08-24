@@ -777,6 +777,18 @@ proc RemoveCD param
 .msg du "无CD模式已开启！",0
 endp
 
+proc EightGates param
+     inc [gateIndex]
+     .if [gateIndex]>8
+	 mov [gateIndex],0
+     .endif
+     mov eax,[gateIndex]
+     stdcall Encrypt,STATS_COEFF-0x8,dword[gateValue+eax*4]
+     Announce .msg,edx,37,GREEN
+     ret
+.msg du "八门遁甲！",0
+endp
+
 VK_OEM_3 = 0xC0
 NEW_LINE = 0x0A
 hCurrentMod dd ?
@@ -784,6 +796,17 @@ submitTimer dd ?
 hhook dd ?
 currentQuest dd ?
 unlinkedLdr dd ?
+gateIndex dd ?
+gateValue:
+dd 0.01
+dd 0.02
+dd 0.03
+dd 0.04
+dd 0.05
+dd 0.06
+dd 0.07
+dd 0.08
+dd 0.09
 logfile db 'C:\fasm.log',0
 access db 'a+',0
 
@@ -858,6 +881,7 @@ HotkeyEntry 0,1,0,VK_UP,AdvanceRoom,UP
 HotkeyEntry 0,1,0,VK_DOWN,AdvanceRoom,DOWN
 HotkeyEntry 0,0,0,VK_INSERT,EnumDungeonEntities,InstantKill
 HotkeyEntry 0,1,0,'Z',StatsBoost,0
+HotkeyEntry 0,1,0,'X',EightGates,0
 HotkeyEntry 0,1,0,'C',EnumDungeonEntities,ZeroHealth
 HotkeyEntry 0,1,0,'W',EnumDungeonEntities,IgnoreTeamates
 HotkeyEntry 0,1,0,'D',EnumDungeonEntities,AttackEnemy
@@ -871,6 +895,6 @@ HotkeyEntry 0,1,0,'5',SubmitChallengeQuest,0
 HotkeyEntry 0,1,0,VK_OEM_PLUS,AdjustSpeed,1
 HotkeyEntry 0,1,0,VK_OEM_MINUS,AdjustSpeed,-1
 HotkeyEntry 0,0,0,VK_F1,ClearAcceptedQuests,0
-HotkeyEntry 0,0,0,VK_F6,ToggleAutoPickup,0
+HotkeyEntry 0,0,0,VK_F6,ToggleAutoPickup,
 endHk:
 include 'BaseAddresses.ASM'
