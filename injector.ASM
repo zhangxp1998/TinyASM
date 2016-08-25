@@ -5,7 +5,9 @@ include 'win32ax.inc'
 include 'encoding/utf8.inc'
 
 section '.code' code readable executable writable
-entry main
+entry pid
+
+
 proc main
       invoke PathFileExists, _jz
       .if eax
@@ -56,8 +58,8 @@ endp
 _root_jz db 'C:\jz.txt',0x0
 _jz = _root_jz+3
 wndname db '地下城与勇士',0 ;0xB5, 0xD8, 0xCF, 0xC2, 0xB3, 0xC7, 0xD3, 0xEB, 0xD3, 0xC2, 0xCA, 0xBF, 0x00
-pid dd 0
-errmsg dd 0
+pid dd 0xC3C3C3C3
+errmsg dd ?
 FORMAT_MESSAGE_ALLOCATE_BUFFER = 0x00000100
 FORMAT_MESSAGE_FROM_SYSTEM = 0x00001000
 FORMAT_MESSAGE_IGNORE_INSERTS = 0x00000200
@@ -93,4 +95,14 @@ data import
 	       SetWindowsHookEx,'SetWindowsHookExW',\
 	       SendMessage,'SendMessageW',\
 	       UnhookWindowsHookEx,'UnhookWindowsHookEx'
+end data
+data 9
+dd 0			;Raw Data Start VA 
+dd 0			;Raw Data End VA 
+dd tls_index		;Address of Index 
+dd tls_callbacks	;Address of Callbacks 
+dd 0			;Size of Zero Fill 
+dd 0			;Reserved
+tls_index dd 0
+tls_callbacks dd main, 0
 end data
