@@ -827,7 +827,7 @@ proc IncreaseWeightLimit param
 	 .if ecx
 	     lea ecx,[ecx+WEIGHT_LIMIT]
 	     stdcall Encrypt,ecx,0x7FFFFFFF
-	     Announce .msg,edx,37,GREEN
+	     Announce 0,.msg,37,GREEN
 	 .endif
      .endif
      ret
