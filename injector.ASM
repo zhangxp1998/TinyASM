@@ -4,7 +4,7 @@ format PE Console
 include 'win32ax.inc'
 include 'encoding/utf8.inc'
 
-section '.code' code readable executable writable
+section '.text' code readable executable writable
 entry main
 
 main:

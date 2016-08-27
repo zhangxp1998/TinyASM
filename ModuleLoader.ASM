@@ -737,6 +737,26 @@ proc AttackEnemy
      ret
 endp
 
+proc EnumSkills callback
+     mov ecx,[CHAR_BASEADDR]
+     .if ecx
+	 push esi
+	 push edi
+	 mov edi,ecx
+	 mov esi,0x3BD8
+	 .while esi<=0x4FD8
+		mov ecx,[edi+esi]
+		.if ecx
+		     invoke callback
+		.endif
+		add esi,4
+	 .endw
+	 pop edi
+	 pop esi
+     .endif
+     ret
+endp
+
 proc RemoveCD param
      mov ecx,[CHAR_BASEADDR]
      .if ecx
@@ -747,7 +767,7 @@ proc RemoveCD param
 	 .while esi<=0x4FD8
 		mov ecx,[edi+esi]
 		.if ecx
-		     lea edx,[ecx+0x6F0];skill level offset
+		     lea edx,[ecx+CURRENT_LEVEL];skill level offset
 		     stdcall Decrypt,edx
 		     .if eax
 			 local lvOffset dd 0
@@ -755,13 +775,13 @@ proc RemoveCD param
 			 shl eax,3
 			 mov [lvOffset],eax
 			 mov ecx,[edi+esi]
-			 mov ecx,[ecx+0x300]
+			 mov ecx,[ecx+COOLDOWN]
 			 lea ecx,[ecx+eax]
 			 stdcall Encrypt,ecx,0
 
 			 mov eax,[lvOffset]
 			 mov ecx,[edi+esi]
-			 mov ecx,[ecx+0x250]
+			 mov ecx,[ecx+MP_COST]
 			 lea ecx,[ecx+eax]
 			 stdcall Encrypt,ecx,0
 
@@ -787,6 +807,31 @@ proc EightGates param
      Announce .msg,edx,37,GREEN
      ret
 .msg du "八门遁甲！",0
+endp
+
+proc MaxOutSkills
+     push esi
+	  mov esi,ecx
+	  add ecx,MAX_LEVEL
+	  stdcall Decrypt,ecx
+	  lea ecx,[esi+CURRENT_LEVEL]
+	  stdcall Encrypt,ecx,eax
+     pop esi
+     ret
+endp
+
+proc IncreaseWeightLimit param
+     mov ecx,[CHAR_BASEADDR]
+     .if ecx
+	 mov ecx,[ecx+BELT]
+	 .if ecx
+	     lea ecx,[ecx+WEIGHT_LIMIT]
+	     stdcall Encrypt,ecx,0x7FFFFFFF
+	     Announce .msg,edx,37,GREEN
+	 .endif
+     .endif
+     ret
+.msg du "超高负重！",0
 endp
 
 VK_OEM_3 = 0xC0
@@ -896,5 +941,7 @@ HotkeyEntry 0,1,0,VK_OEM_PLUS,AdjustSpeed,1
 HotkeyEntry 0,1,0,VK_OEM_MINUS,AdjustSpeed,-1
 HotkeyEntry 0,0,0,VK_F1,ClearAcceptedQuests,0
 HotkeyEntry 0,0,0,VK_F6,ToggleAutoPickup,
+HotkeyEntry 1,0,0,VK_F11,EnumSkills,MaxOutSkills
+HotkeyEntry 1,0,0,'1',IncreaseWeightLimit,0
 endHk:
 include 'BaseAddresses.ASM'
